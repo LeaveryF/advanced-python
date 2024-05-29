@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 # 仍然未能实现 因为asyncio
-# bugged: websocket.recv()是异步函数 必须await 否则返回的是协程对象
 
 # 功能：
 # 运行python脚本将连接并访问ws://localhost:1234/echo建立websocket连接
@@ -23,32 +22,40 @@ from threading import Thread
 import time
 
 # 接收线程
-def recv_data(websocket):
+async def recv_data(websocket):
     while True:
-        message = websocket.recv()
+        message = await websocket.recv()
         print("<<<", message)
         time.sleep(1)
 
 # 发送线程
-def send_data(websocket):
+async def send_data(websocket):
     while True:
         message = input() # 输入数据时只管输入就好
-        websocket.send(message)
+        await websocket.send(message)
 
 async def echo():
     uri = "ws://localhost:1234/echo"
     async with websockets.connect(uri) as websocket:
-        # 创建线程 参数元组包含websocket
-        recv_thread = Thread(target=recv_data, name="recv_thread", args=(websocket,))
-        send_thread = Thread(target=send_data, name="send_thread", args=(websocket,))
+        # # 创建线程 参数元组包含websocket
+        # recv_thread = Thread(target=recv_data, name="recv_thread", args=(websocket,))
+        # send_thread = Thread(target=send_data, name="send_thread", args=(websocket,))
         
-        # 启动线程
-        recv_thread.start()
-        send_thread.start()
+        # # 启动线程
+        # recv_thread.start()
+        # send_thread.start()
 
-        # 等待线程结束 当然实际上不会结束
-        recv_thread.join()
-        send_thread.join()
+        # # 等待线程结束 当然实际上不会结束
+        # recv_thread.join()
+        # send_thread.join()
+
+        # 创建一个协程用于接收消息
+        recv_task = asyncio.create_task(recv_data(websocket))
+        # 创建一个协程用于发送消息
+        send_task = asyncio.create_task(send_data(websocket))
+
+        # 等待两个协程完成
+        await asyncio.gather(recv_task, send_task)
 
 if __name__ == "__main__":
     asyncio.run(echo())
